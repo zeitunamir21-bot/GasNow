@@ -1,0 +1,44 @@
+workflows:
+  ios-workflow:
+    name: iOS Build
+    max_build_duration: 60
+    environment:
+      xcode: latest
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd ios || true
+          pod install || true
+          cd ..
+
+      - name: Auto detect project
+        script: |
+          echo "Listing iOS folder"
+          ls ios
+
+      - name: Build app (auto)
+        script: |
+          WORKSPACE=$(find ios -name "*.xcworkspace" | head -n 1)
+          PROJECT=$(find ios -name "*.xcodeproj" | head -n 1)
+
+          if [ -n "$WORKSPACE" ]; then
+            echo "Using workspace: $WORKSPACE"
+            SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" | grep -A 1 "Schemes" | tail -n 1 | xargs)
+            xcodebuild -workspace "$WORKSPACE" \
+              -scheme "$SCHEME" \
+              -configuration Release \
+              -sdk iphoneos \
+              -archivePath $CM_BUILD_DIR/build/App.xcarchive archive
+          else
+            echo "Using project: $PROJECT"
+            SCHEME=$(xcodebuild -list -project "$PROJECT" | grep -A 1 "Schemes" | tail -n 1 | xargs)
+            xcodebuild -project "$PROJECT" \
+              -scheme "$SCHEME" \
+              -configuration Release \
+              -sdk iphoneos \
+              -archivePath $CM_BUILD_DIR/build/App.xcarchive archive
+          fi
+
+    artifacts:
+      - build/**/*
